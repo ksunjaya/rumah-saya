@@ -1,52 +1,43 @@
-# Ruang — Mortgage planner
+# Ruang — Mortgage planner, version 2
 
-A mobile-first mortgage calculator built with vanilla HTML, CSS, and JavaScript. No installation, build, external fonts, CDN, analytics, or API required. All calculations run locally.
+A responsive, standalone HTML/CSS/JavaScript calculator. Extract this folder and open index.html. No build, installation, remote libraries, account, or API required. For dependable localStorage behavior, use a static HTTP server or deploy the folder.
 
-## Use it
+## Choose how you want to pay
 
-Open `index.html` in a modern browser. For reliable browser storage behavior, serve the folder over HTTP or deploy it. With Python installed, run `python -m http.server 8080` in this folder and visit http://localhost:8080. Node.js is needed only to run the tests: `node tests.cjs`.
+**Use only my salary allocation (default):** regular payments are exactly net salary × allocation, capped at the debt owed. No automatic top-ups. Optional bonus and one-time payments are additional. The projection continues beyond the chosen contract term, up to 600 months (50 years), to find the actual payoff date. It shows the outstanding balance at contractual maturity. If still unpaid after 50 years, totals are explicitly partial; no payoff or interest-saving claim is made.
 
-## Included
+**Stay on the contract schedule:** regular payments equal the contractual installment. Salary growth does not automatically accelerate repayment. Allocation is only an affordability check. With no extras, the loan lasts the selected term. Optional extras can still shorten it.
 
-- Editable principal, salary, annual salary growth, annual nominal interest, allocation, and contract term.
-- Fixed contractual minimum plus salary-linked extra repayments; month-by-month reducing balance with capped final payments and early payoff.
-- Interactive balance chart: click/tap the chart or use the keyboard-accessible month slider. Switch between nominal and inflation-adjusted values.
-- Monthly and yearly schedules, paginated in groups of 12. Yearly final period can be partial.
-- Minimum-only comparison, live plan, and up to two pinned scenario snapshots. Snapshot numbers identify saved input sets; remove and re-pin to replace a scenario.
-- Full monthly CSV export regardless of the selected table interval, including inputs, contractual/actual payments, extras, balances, shortfalls, and real values. CSV uses numeric IDR amounts with two decimals.
-- Explicit Save settings stores inputs, snapshots, and theme in localStorage. Reset restores defaults and clears this application's saved data. No cloud synchronization. Browser/private-mode restrictions may prevent saving; the calculator remains usable.
-- Optional annual THR/bonus, a configurable share of that bonus, and up to 100 one-time prepayments.
-- System light/dark mode with manual overrides, responsive layout, native form controls, visible keyboard focus, screen-reader table headers and status messages.
+The minimum-only comparison always pays the contractual installment without extras.
 
-## Default assumptions
+Below-installment payments are flagged separately from the projected payoff date. A salary-budget projection assumes the lender allows its payment pattern, including interest capitalization when payments do not cover interest. It does not represent an approved contract, model default or arrears charges, or assume later payments cure missed installments. A zero balance by maturity does not mean every earlier installment was met. Contract mode clearly identifies when the installment exceeds the salary allocation.
 
-| Input | Default |
-| --- | --- |
-| Principal | Rp1,000,000,000 |
-| Net monthly salary | Rp20,000,000 |
-| Annual salary growth | 9% |
-| Annual nominal fixed interest | 5% |
-| Salary allocated to payment | 35% |
-| Contract term | 20 years |
-| Annual inflation | 3% |
-| Annual bonus | 0 salary months (disabled) |
-| Bonus allocation / timing | 100% / loan-year month 12 |
+## Dates and one-time payments
 
-The first regular payment is Rp7,000,000. The contractual minimum is approximately Rp6,599,557.39. Default accelerated payoff occurs in month 124 (10 years, 4 months), with approximately Rp329,481,338.36 interest, versus Rp583,893,774.12 interest for minimum-only payments. Results are projections, not a lender quote.
+- Loan start is the first payment month and year, not the disbursement date. Interest for a full first month is assumed; payments occur at month-end.
+- Enter the net salary received in that first payment month. The annual raise applies in the selected calendar month, beginning with the next occurrence strictly after the first payment month. If the raise month equals the starting month, the first raise is 12 months later.
+- Annual THR/bonus uses a calendar month and that month's salary (including any raise that month). A bonus in the first payment month is included.
+- A one-time extra payment is a single lump sum on top of regular payments, such as Rp50 million from savings. Choose its calendar month/year. It is applied after interest and the regular/bonus payments. Multiple extras on one date add together; amounts are capped at remaining debt. Extras after payoff are unused and flagged.
+- Changing the start date preserves dates already entered for one-time payments. Dates before the start or beyond the 50-year projection are invalid.
+- Monthly schedules and exports show actual dates. Yearly tables group 12 payments from the loan's start month, not January–December; the final group may be partial.
 
-## Calculation contract
+## Defaults
 
-Let `P` be principal, `r = annual nominal interest / 1200`, and `N = years × 12`. The level contractual installment is `A = P × r / (1 - (1 + r)^(-N))`; at 0% interest, `A = P / N`. The implementation uses `log1p`/`expm1` for numerical stability at small positive rates.
+Principal Rp1 billion; net salary Rp20 million/month; salary growth 9% annually; nominal fixed interest 5% annually; salary allocation 35%; contractual term 20 years; inflation 3%; bonus disabled. Example first payment is October 2026 and annual raise month is January. Both are editable, and these dates affect the result.
 
-For month `m`, salary is `initial salary × (1 + growth/100)^floor((m-1)/12)`. It steps up in months 13, 25, etc. The salary budget is salary × allocation. Regular payment is `max(A, salary budget)`, capped at the outstanding balance plus current interest. This makes salary allocation a **total regular payment target**, not a percentage added on top of the minimum.
+## Calculation and display
 
-Interest accrues on the opening balance each month. Payments apply at month-end, in this order: regular payment, annual bonus, one-time prepayments. The bonus uses the current loan year's salary, in the chosen 1–12 month within each loan year (not a calendar month). Multiple prepayments in the same month are summed. Payments are capped to avoid overpaying. Extra payments reduce term, not the contractual minimum. Prepayments after payoff are unused and flagged. No fees, insurance, tax, penalty, rate resets, daily accrual, or installment recasting is modeled.
+Monthly interest rate is annual nominal interest / 1200. The contract installment is P × r / (1 − (1+r)^(-N)); at zero interest, P / N. Interest uses the opening balance. Regular payment, bonus, and extra payments follow in that order. No fees, insurance, taxes, rate resets, daily accrual, or prepayment penalties are included; extra payments reduce duration without recasting the installment.
 
-If the salary budget is insufficient, the plan **assumes the shortfall is funded elsewhere** and continues paying the minimum. An explicit warning shows the number of shortfall months and maximum gap. This is not a cash-constrained default model: it does not silently underpay, capitalize unpaid interest, or pretend the minimum is affordable. Invalid inputs suppress the results until corrected.
+Today's-rupiah values discount each month-end payment/balance by (1 + annual inflation/100)^(month/12). Total real payments sum the discounted monthly payments. The real chart uses discounted balances; real table columns are added alongside nominal figures. Inflation does not change nominal payments. Each saved comparison uses its own assumptions.
 
-Today's-rupiah values discount each month-end amount by `(1 + annual inflation/100)^(m/12)`. Total real payments sum individually discounted cash flows. Inflation does not change the nominal mortgage payments. In real-value mode the chart displays real balances, and the schedule adds real payment/balance columns; principal and interest columns remain nominal. Snapshot real totals use each snapshot's inflation assumption.
+Calculations retain floating-point precision; balances below Rp0.000001 are treated as zero. Display rounds to Rp1; CSV amounts use two decimal places. Lender-specific rounding may differ. Negative principal in a schedule means payments failed to cover interest and the balance grew.
 
-Calculation uses full floating-point precision, with balances below Rp0.000001 treated as repaid. Display rounds to the nearest rupiah; CSV rounds to two decimals. Lender-specific monthly rounding can produce small differences. Yearly totals sum the unrounded monthly values, so adding displayed rows may differ by a few rupiah.
+The chart can be tapped or explored using its keyboard-accessible month slider. It extends to the later of contractual maturity and the budget projection end, showing increasing balances where applicable. CSV always contains the full monthly projection, strategy, dates, unpaid status, maturity balance, and real values. Compare up to two pinned snapshots alongside the current plan and minimum-only baseline.
+
+## Saved settings
+
+Save settings stores inputs, snapshots, and theme on this browser/device. Version 2 uses a new storage key because payment rules changed. Earlier saved data is not silently reinterpreted: a notice asks you to enter dates and the desired plan. Old data remains until Reset. Reset clears both versions and restores defaults. Browser restrictions may block localStorage; calculations and CSV remain available.
 
 ## Deploy on GitHub Pages
 
@@ -67,10 +58,12 @@ For Git-connected deployment, set the publish directory to the folder containing
 
 ## Files and testing
 
-- `index.html`: accessible page structure and input controls.
-- `styles.css`: responsive layout and themes.
-- `engine.js`: pure amortization engine, shared by browser and tests.
-- `app.js`: chart, rendering, comparison, storage, CSV, UI events.
-- `tests.cjs`: Node built-in assertions, including annuity benchmarks, salary timing, zero interest, shortfall behavior, bonus timing, prepayments, payoff capping, inflation, validation, aggregation, and accounting invariants over 300 deterministic scenarios.
+index.html, styles.css, engine.js, and app.js are the website. The engine is shared with the Node tests. All tests use built-in Node modules; no installation is needed.
 
-Run `node tests.cjs`. There is no dependency installation step.
+Run:
+
+    node tests.cjs
+    node dates-tests.cjs
+    node ui-smoke.cjs
+
+Coverage includes 13 core tests, accounting invariants over 300 deterministic scenarios, 7 calendar/strategy regression groups, and a lightweight simulated-DOM UI wiring check (initial rendering, switching plans, unpaid state, CSV, validation, reset, snapshots, save, schedule, and inflation). The UI smoke test is not a real browser or visual layout test. Browser visual QA remains unverified because the local preview browser could not connect in the authoring environment.
