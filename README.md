@@ -1,5 +1,13 @@
 # Ruang — Mortgage planner, version 3
 
+### Simple Excel payment checklist
+
+The separate **Simple Excel · payment checklist** button downloads one worksheet with exactly the 14 requested monthly projection columns, followed by **Sudah Dibayar**, **Tanggal Bayar**, and **Catatan**. These three tracking columns start blank. Select ✓ or Belum using the status dropdown; enter the actual payment date and any receipt reference or notes, then save the workbook in Excel. All monetary columns use numeric rupiah amounts and shares use numeric percentage cells.
+
+The workbook includes a short Indonesian heading, current loan assumptions and a projection-status note, frozen header rows and first two columns, column filters, and landscape printing with repeated headings. Total Pembayaran includes one-time extras even though the simple view has no separate extra-payment column. The detailed workbook remains available. The simple export does not require a valid sale-price estimate, because it contains no sale-payout amounts.
+
+This checklist records your manual marks only in the downloaded workbook. A new export starts blank; it does not import previous marks, verify receipts or change the projected balances. Use Catatan to document any differences between actual and planned payments. Run `node sale-tests.cjs --samples` to also create a sample `ruang-checklist-pembayaran.xlsx`.
+
 ## Version 3: sale shares, Excel and Indonesian contract PDF
 
 The **Your share of the sale** section models a family loan with no down payment. At each month-end, the borrower's economic share is original principal actually repaid divided by the original loan. The creditor's share is the remainder. Paid interest stays with the creditor and does not increase the borrower's share. This is an agreed distribution of sale proceeds, not a land-title transfer.

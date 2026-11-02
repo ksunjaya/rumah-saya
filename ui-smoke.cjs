@@ -34,4 +34,6 @@ const saved=JSON.parse(store.get('ruang-mortgage-v2'));assert.equal(saved.config
 assert.equal(saved.saleSettings.costs,0);assert.ok(!JSON.stringify(saved).includes('creditorDetails'));
 elements.monthly.onclick();assert.match(elements.schedule.innerHTML,/Oct 2026/);
 elements.valueBasis.value='real';elements.valueBasis.onchange();assert.match(elements.schedule.innerHTML,/today/);
+elements.saleCosts.value='-1';elements.saleCosts.handlers.input();assert.equal(elements.exportXlsx.disabled,true);assert.equal(elements.exportSimpleXlsx.disabled,false);
+assert.equal(typeof elements.exportSimpleXlsx.onclick,'function');
 console.log('PASS UI wiring: rendering, strategies, unpaid state, CSV, validation, reset, comparison, save, schedule and inflation');

@@ -16,6 +16,16 @@ async function main(){
   const clauses=D.clauses(c,r,s,{borrower:'Nama uji',creditor:'Keluarga uji'}).flat().join(' ');
   assert.match(clauses,/penyelesaian penuh seluruh pinjaman/);assert.match(clauses,/tidak lagi ditagih/);assert.match(clauses,/bukan bukti kepemilikan/);
   const book=await D.xlsx(c,r,s);const zip=await Zip.loadAsync(book);
+  const simple=await D.simpleXlsx(c,r),simpleZip=await Zip.loadAsync(simple);
+  const simpleXml=await simpleZip.file('xl/worksheets/sheet1.xml').async('string');
+  assert.equal((simpleXml.match(/<row /g)||[]).length,r.months+5);
+  assert.match(simpleXml,/sqref="O6:O122"/);assert.match(simpleXml,/"✓,Belum"/);assert.match(simpleXml,/topLeftCell="C6"/);
+  assert.equal(D.simpleColumns.length,17);assert.equal(D.simpleColumns[13][1],'Porsi Kreditur');
+  assert.ok(!simpleXml.includes('Hasil jual bersih'));assert.match(simpleXml,/<c r="M6" s="2"><v>/);
+  assert.match(simpleXml,/<c r="O6" s="0" t="inlineStr"><is><t xml:space="preserve"><\/t>/);
+  assert.match(simpleXml,/<c r="P6" s="4" t="inlineStr">/);
+  const longSimple=await Zip.loadAsync(await D.simpleXlsx({...c,salary:0,allocation:0},noPay));
+  assert.match(await longSimple.file('xl/worksheets/sheet1.xml').async('string'),/sqref="O6:O605"/);
   assert.ok(zip.file('xl/worksheets/sheet2.xml'));const xml=await zip.file('xl/worksheets/sheet2.xml').async('string');
   assert.equal((xml.match(/<row /g)||[]).length,r.months+1);assert.ok(xml.includes('Porsi debitur'));assert.match(xml,/<c r="O2" s="2"><v>/);
   const bytes=await D.pdf(c,r,s,{borrower:'Nama uji',creditor:'Keluarga uji',property:'Rumah contoh'});
@@ -26,6 +36,7 @@ async function main(){
   if(process.argv.includes('--samples')){
     const out=path.resolve(__dirname,'../outputs');fs.mkdirSync(out,{recursive:true});
     fs.writeFileSync(path.join(out,'ruang-contoh-jadwal.xlsx'),book);fs.writeFileSync(path.join(out,'ruang-contoh-draf-perjanjian.pdf'),await D.pdf(c,r,s,{}));fs.writeFileSync(path.join(out,'ruang-contoh-jadwal.csv'),D.csv(c,r,s));fs.writeFileSync(path.join(out,'ruang-stress-600-months.pdf'),longPdf);
+    fs.writeFileSync(path.join(out,'ruang-checklist-pembayaran.xlsx'),simple);
   }
   console.log(`PASS sale formulas, interest ledger, 0/100% shares, costs validation, full-settlement clause, XLSX rows/types and PDF generation (${pdf.getPageCount()} pages; stress ${longDoc.getPageCount()} pages).`);
 }

@@ -10,6 +10,7 @@
     const s=values(),errors=RuangDocuments.validateSale(s);
     el('saleError').textContent=errors.join(' ');el('saleError').hidden=!errors.length;
     el('exportXlsx').disabled=el('contractPdf').disabled=!!errors.length;
+    el('exportSimpleXlsx').disabled=false;
     el('salePrice').setAttribute('aria-invalid',String(!Number.isSafeInteger(s.price)||s.price<0||s.price>1e15));
     el('saleCosts').setAttribute('aria-invalid',String(!Number.isSafeInteger(s.costs)||s.costs<0||s.costs>s.price));
     el('saleMonth').max=result.months;el('saleMonth').value=Math.min(Number(el('saleMonth').value),result.months);
@@ -22,10 +23,11 @@
   }
   function download(data,type,name){const url=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   async function generate(kind){
-    const s=values();if(!result||result.errors.length||RuangDocuments.validateSale(s).length){el('documentStatus').textContent='Check loan inputs, sale price and costs before exporting.';return;}
-    el('documentStatus').textContent='Generating locally…';el('exportXlsx').disabled=el('contractPdf').disabled=true;
+    const s=values();if(!result||result.errors.length||(kind!=='simple'&&RuangDocuments.validateSale(s).length)){el('documentStatus').textContent='Check loan inputs, sale price and costs before exporting.';return;}
+    el('documentStatus').textContent='Generating locally…';el('exportSimpleXlsx').disabled=el('exportXlsx').disabled=el('contractPdf').disabled=true;
     try{
-      if(kind==='xlsx')download(await RuangDocuments.xlsx(c,result,s),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ruang-jadwal-dan-porsi-penjualan.xlsx');
+      if(kind==='simple')download(await RuangDocuments.simpleXlsx(c,result),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ruang-checklist-pembayaran.xlsx');
+      else if(kind==='xlsx')download(await RuangDocuments.xlsx(c,result,s),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ruang-jadwal-dan-porsi-penjualan.xlsx');
       else {const d=Object.fromEntries(['creditor','creditorDetails','borrower','borrowerDetails','property','place','signDate'].map(k=>[k,el('contract_'+k).value]));download(await RuangDocuments.pdf(c,result,s,d),'application/pdf','ruang-draf-perjanjian-pinjaman.pdf');}
       el('documentStatus').textContent='File generated on this device. All monthly rows are included.';
     }catch(error){el('documentStatus').textContent='Could not create the file. Check that the vendor folder is present, then try again.';console.error(error);}
@@ -35,6 +37,7 @@
   try{const saved=JSON.parse(localStorage.getItem('ruang-mortgage-v2')||'null')?.saleSettings;if(saved&&!RuangDocuments.validateSale(saved).length){el('salePrice').value=saved.price;el('saleCosts').value=saved.costs;if(Number.isInteger(saved.month)&&saved.month>=0&&saved.month<=600)el('saleMonth').value=saved.month;}}catch{}
   ['salePrice','saleCosts','saleMonth'].forEach(id=>el(id).addEventListener('input',()=>render(c,result)));
   el('exportXlsx').onclick=()=>generate('xlsx');el('contractPdf').onclick=()=>generate('pdf');
+  el('exportSimpleXlsx').onclick=()=>generate('simple');
   root.SaleUI={render,values,saved:()=>({...values(),month:Number(el('saleMonth').value)}),reset:()=>{el('salePrice').value=Mortgage.defaults.principal;el('saleCosts').value=0;el('saleMonth').value=12;['creditor','creditorDetails','borrower','borrowerDetails','property','place','signDate'].forEach(k=>el('contract_'+k).value='');}};
   render(config,current);
 })(globalThis);

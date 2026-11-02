@@ -66,20 +66,45 @@
       ['Pembulatan','Amortisasi presisi penuh. Bagian hasil jual Debitur dibulatkan ke rupiah terdekat; bagian Kreditur = hasil bersih dikurangi bagian Debitur, agar jumlah tepat. Persentase Excel berupa nilai numerik pecahan.']
     ];
   }
-  async function xlsx(c,r,s) {
+  const simpleColumns = [
+    ['month','Bulan ke',0],['date','Periode',0],['payment','Total Pembayaran',1],['regular','Pembayaran Rutin',1],['bonus','Bonus',1],
+    ['interest','Bunga Timbul',1],['interestPaid','Bunga Dibayar',1],['unpaidInterest','Bunga Belum Dibayar',1],['principal','Penurunan Saldo Bersih',1],
+    ['originalPrincipalPayment','Pokok awal dibayar bulan ini',1],['originalPrincipalPaid','Akumulasi pokok awal dibayar',1],['balance','Sisa Saldo',1],
+    ['borrowerShare','Porsi Debitur',2],['creditorShare','Porsi Kreditur',2],['paid','Sudah Dibayar',0],['paymentDate','Tanggal Bayar',4],['notes','Catatan',0]
+  ];
+  async function xlsx(c,r,s,simple=false) {
     const Zip=root.JSZip||(typeof require==='function'?require('./vendor/jszip.min.js'):null);
     const zip=new Zip();
     const letters=n=>{let t='';for(n++;n;n=Math.floor((n-1)/26))t=String.fromCharCode(65+(n-1)%26)+t;return t;};
     const cell=(value,row,col,style=0)=>typeof value==='number'?`<c r="${letters(col)}${row}" s="${style}"><v>${value}</v></c>`:`<c r="${letters(col)}${row}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${xml(value)}</t></is></c>`;
     const sheet=(rows,styles,filter=false)=>`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${styles.map((_,i)=>`<col min="${i+1}" max="${i+1}" width="${filter?24:i===0?45:100}" customWidth="1"/>`).join('')}</cols><sheetData>${rows.map((row,i)=>`<row r="${i+1}"${i===0?' ht="44" customHeight="1"':''}>${row.map((v,j)=>cell(v,i+1,j,i===0?3:styles[j]||0)).join('')}</row>`).join('')}</sheetData>${filter?`<autoFilter ref="A1:${letters(styles.length-1)}${rows.length}"/>`:''}</worksheet>`;
-    const data=schedule(c,r,s);
-    const sheets=[['Asumsi',summary(c,r,s),[0,0],false],['Jadwal bulanan',[columns.map(x=>x[1]),...data.map(row=>columns.map(([key])=>row[key]))],columns.map(x=>x[2]),true],['Tambahan sekali',[['Bulan ke','Tanggal','Jumlah Rp'],...c.prepayments.map(p=>[p.month,root.Mortgage.dateAt(c.startDate,p.month-1),p.amount])],[0,0,1],true]];
+    const data=simple?r.rows:schedule(c,r,s);
+    const sheets=simple?[['Checklist Pembayaran',[],simpleColumns.map(x=>x[2]),true]]:[['Asumsi',summary(c,r,s),[0,0],false],['Jadwal bulanan',[columns.map(x=>x[1]),...data.map(row=>columns.map(([key])=>row[key]))],columns.map(x=>x[2]),true],['Tambahan sekali',[['Bulan ke','Tanggal','Jumlah Rp'],...c.prepayments.map(p=>[p.month,root.Mortgage.dateAt(c.startDate,p.month-1),p.amount])],[0,0,1],true]];
     zip.file('[Content_Types].xml',`<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`);
     zip.file('_rels/.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
     zip.file('xl/workbook.xml',`<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map(([name],i)=>`<sheet name="${name}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`);
     zip.file('xl/_rels/workbook.xml.rels',`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="style" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
     zip.file('xl/styles.xml','<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF163F32"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="4"><xf xfId="0"/><xf numFmtId="3" xfId="0" applyNumberFormat="1"/><xf numFmtId="10" xfId="0" applyNumberFormat="1"/><xf fontId="1" fillId="2" xfId="0" applyFont="1" applyFill="1"><alignment wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>');
-    sheets.forEach(([,rows,styles,filter],i)=>zip.file(`xl/worksheets/sheet${i+1}.xml`,sheet(rows,styles,filter)));
+    if(simple){
+      const end=data.length+5;
+      const rows=[
+        ['RUANG - CHECKLIST PEMBAYARAN BULANAN'],
+        [`Pokok awal: ${money(c.principal)} | Bunga: ${c.interest}%/tahun | Mulai: ${c.startDate} | Tenor acuan: ${c.years} tahun | Strategi: ${c.strategy==='budget'?'alokasi gaji':'angsuran kontrak'}`],
+        ['Angka merupakan proyeksi dalam rupiah. Isi tanda ✓ setelah pembayaran diterima, tanggal aktual, dan catatan. Total termasuk tambahan sekali bila ada.'],
+        [r.paidOff?'Proyeksi lunas: '+r.payoffDate:'BELUM LUNAS setelah 50 tahun; saldo akhir '+money(r.balance)+'. Checklist bukan bukti pelunasan.'],
+        simpleColumns.map(x=>x[1]),...data.map(row=>simpleColumns.map(([key])=>row[key]??''))
+      ];
+      const body=rows.map((row,i)=>`<row r="${i+1}"${i<5?` ht="${i===4?48:30}" customHeight="1"`:''}>${row.map((v,j)=>cell(v,i+1,j,i===0||i===4?3:i<4?0:simpleColumns[j][2])).join('')}</row>`).join('');
+      const widths=[10,14,22,22,20,20,20,22,24,26,27,23,18,18,20,20,40];
+      zip.file('xl/worksheets/sheet1.xml',`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView workbookViewId="0"><pane xSplit="2" ySplit="5" topLeftCell="C6" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${body}</sheetData><autoFilter ref="A5:Q${end}"/><mergeCells count="4">${[1,2,3,4].map(i=>`<mergeCell ref="A${i}:Q${i}"/>`).join('')}</mergeCells><dataValidations count="1"><dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="Status pembayaran" error="Pilih tanda centang atau Belum." sqref="O6:O${end}"><formula1>"✓,Belum"</formula1></dataValidation></dataValidations><pageMargins left="0.25" right="0.25" top="0.4" bottom="0.4" header="0.2" footer="0.2"/><pageSetup paperSize="8" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`);
+      // A real date format for the blank, manually editable payment-date column.
+      let style=await zip.file('xl/styles.xml').async('string');
+      style=style.replace('<cellXfs count="4">','<cellXfs count="5">').replace('</cellXfs>','<xf numFmtId="14" xfId="0" applyNumberFormat="1"/></cellXfs>');
+      zip.file('xl/styles.xml',style);
+      let workbook=await zip.file('xl/workbook.xml').async('string');
+      workbook=workbook.replace('</workbook>',`<definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'Checklist Pembayaran'!$1:$5</definedName><definedName name="_xlnm.Print_Area" localSheetId="0">'Checklist Pembayaran'!$A$1:$Q$${end}</definedName></definedNames></workbook>`);
+      zip.file('xl/workbook.xml',workbook);
+    }else sheets.forEach(([,rows,styles,filter],i)=>zip.file(`xl/worksheets/sheet${i+1}.xml`,sheet(rows,styles,filter)));
     return zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
   }
   function clauses(c,r,s,d={}) {
@@ -143,6 +168,7 @@
     doc.setTitle('Draf Perjanjian Pinjaman Keluarga - Ruang');doc.setAuthor('Ruang - dibuat lokal di browser');
     return doc.save();
   }
-  const api={validateSale,distribution,schedule,columns,csv,xlsx,pdf,clauses};
+  const simpleXlsx=(c,r)=>xlsx(c,r,null,true);
+  const api={validateSale,distribution,schedule,columns,simpleColumns,csv,xlsx,simpleXlsx,pdf,clauses};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;root.RuangDocuments=api;
 })(typeof window!=='undefined'?window:globalThis);
