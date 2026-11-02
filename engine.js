@@ -41,7 +41,7 @@
     const minimum = minimumPayment(c.principal, c.interest, months);
     let balance = c.principal, totalInterest = 0, totalPaid = 0, realPaid = 0;
     const rows = [], horizon = accelerated && c.strategy === 'budget' ? 600 : months;
-    let salary = c.salary;
+    let salary = c.salary, unpaidInterest = 0, originalPrincipalPaid = 0, interestPaidTotal = 0;
     for (let month = 1; month <= horizon && balance > 0.000001; month++) {
       const date = dateAt(c.startDate, month - 1), calendarMonth = Number(date.slice(5));
       if (month > 1 && calendarMonth === c.raiseMonth) salary *= 1 + c.growth / 100;
@@ -56,11 +56,17 @@
       const prepayment = Math.min(plannedPrepayment, Math.max(0, due - regular - bonus));
       const payment = regular + bonus + prepayment;
       const principal = payment - interest;
+      const interestPaid = Math.min(payment, unpaidInterest + interest);
+      unpaidInterest = Math.max(0, unpaidInterest + interest - interestPaid);
+      const originalPrincipalPayment = Math.min(c.principal - originalPrincipalPaid, Math.max(0, payment - interestPaid));
+      originalPrincipalPaid += originalPrincipalPayment;
+      interestPaidTotal += interestPaid;
       balance = Math.max(0, opening - principal);
       if (balance < 0.000001) balance = 0;
       const discount = (1 + c.inflation / 100) ** (month / 12);
       totalInterest += interest; totalPaid += payment; realPaid += payment / discount;
-      rows.push({ month, date, salary, budget, opening, contractual, regular, extra: Math.max(0, regular - contractual), bonus, prepayment, payment, interest, principal, balance, realBalance: balance / discount, realPayment: payment / discount, shortfall: Math.max(0, contractual - budget), belowMinimum: month <= months ? Math.max(0, contractual - payment) : 0 });
+      const borrowerShare = balance === 0 ? 1 : Math.max(0, Math.min(1, originalPrincipalPaid / c.principal));
+      rows.push({ month, date, salary, budget, opening, contractual, regular, extra: Math.max(0, regular - contractual), bonus, prepayment, payment, interest, principal, balance, interestPaid, interestPaidTotal, unpaidInterest, originalPrincipalPayment, originalPrincipalPaid, borrowerShare, creditorShare: 1 - borrowerShare, realBalance: balance / discount, realPayment: payment / discount, shortfall: Math.max(0, contractual - budget), belowMinimum: month <= months ? Math.max(0, contractual - payment) : 0 });
     }
     const paidOff = balance === 0;
     return { errors: [], minimum, rows, months: rows.length, totalInterest, totalPaid, realPaid, balance, paidOff, maturityBalance: rows[months - 1]?.balance || 0, maturityDate: dateAt(c.startDate, months - 1), payoffDate: paidOff ? rows.at(-1).date : null, belowMinimumMonths: rows.filter(r => r.belowMinimum > .01).length, growingMonths: rows.filter(r => r.principal < -.01).length, shortfallMonths: rows.filter(r => r.shortfall > 0.01).length };

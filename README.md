@@ -1,4 +1,28 @@
-# Ruang — Mortgage planner, version 2
+# Ruang — Mortgage planner, version 3
+
+## Version 3: sale shares, Excel and Indonesian contract PDF
+
+The **Your share of the sale** section models a family loan with no down payment. At each month-end, the borrower's economic share is original principal actually repaid divided by the original loan. The creditor's share is the remainder. Paid interest stays with the creditor and does not increase the borrower's share. This is an agreed distribution of sale proceeds, not a land-title transfer.
+
+Enter the gross sale price and selling costs in whole rupiah. Costs are deducted first; the remaining proceeds are split by the percentages. Sale payouts are rounded to whole rupiah, with the creditor receiving the remaining amount so the payouts sum exactly to net proceeds. The same sale estimate is used as an alternative hypothetical sale in each month, not as repeated sales. Actual settlement must use actual payments and documented costs.
+
+**Agreed full settlement:** after the sale completes and the shares are paid, all debt is settled, even if the creditor receives less than the remaining balance. The balance is not deducted again before splitting. If the creditor's share is greater than the balance, it remains their agreed share. Future interest stops at sale. Previously paid interest stays with the creditor.
+
+For underpayments, an explicit ledger tracks paid interest and unpaid interest. Payments cover prior unpaid interest and current interest before reducing original principal. Repaying capitalized interest does not accidentally count as buying more of the original principal. Initial shares are 0% borrower and 100% creditor; at full repayment they become 100% and 0%.
+
+**Download Excel (.xlsx)** produces a real workbook with assumptions, every projected month, and one-time prepayments. Percentages are numeric Excel percentage cells. The monthly data includes principal, accrued/paid/unpaid interest, cumulative original principal and paid interest, balances, both shares, and hypothetical sale proceeds. Existing CSV export now includes these columns too, while preserving salary, affordability and inflation-adjusted data.
+
+**Contract details & PDF** generates an Indonesian draft family-loan agreement, editable party/property details, the full-settlement sale clause, assumptions and a complete monthly schedule. Headers repeat on every schedule page. All rows export, regardless of table pagination or selected sale month. The PDF is marked DRAFT and projected figures are explicitly not payment receipts. Blank identities and unresolved clauses remain placeholders. Legal review is needed before use, especially for repayment below the reference installment, interest capitalization, land formalities and security. This generator does not sign or register any agreement.
+
+Legal drafting background: Indonesian official explanations of agreement requirements and binding agreed terms: [Mahkamah Agung](https://jdih.mahkamahagung.go.id/index.php/tulisan-hukum-detail/dilema-perjanjian-yang-dapat-dibatalkan-dan-batal-demi-hukum-02t) and [DJKN, Ministry of Finance](https://www.djkn.kemenkeu.go.id/artikel/baca/15872/Mau-Bikin-Perjanjian-Yuk-Simak-Hal-Hal-Apa-Saja-yang-Harus-Dipenuhi). These explain general principles; they are not approval of this generated agreement.
+
+Privacy: documents are created on your device. No OpenAI token, API, CDN or document-upload service is used. The required MIT-licensed JSZip and pdf-lib browser bundles and their licenses are included in `vendor/`; keep that folder in any deployment. Identity/property text is held only in the current tab and the downloaded PDF; it is not added to localStorage. Save settings remembers the sale-price/cost estimate and selected sale month along with existing settings.
+
+Additional source files: `documents.js` (pure export and sale calculations), `sale-ui.js` (sale and document controls), and `sale-tests.cjs` (formulas, paid-interest ledger, allocation rounding, spreadsheet structure, settlement clause and 600-month PDF stress test).
+
+Run `node sale-tests.cjs` alongside the other tests below. `node sale-tests.cjs --samples` creates an illustrative PDF/XLSX/CSV in a sibling `outputs/` folder. Samples use the default mortgage and a Rp1.2 billion sale with Rp50 million selling costs; these are examples, not your agreed price.
+
+Verification: all calculation and simulated UI checks passed, generated Excel was independently reopened with openpyxl, generated PDF text was checked with pypdf and representative PDF pages were rendered for visual inspection. Browser layout remains unverified because the local preview browser could not connect.
 
 A responsive, standalone HTML/CSS/JavaScript calculator. Extract this folder and open index.html. No build, installation, remote libraries, account, or API required. For dependable localStorage behavior, use a static HTTP server or deploy the folder.
 

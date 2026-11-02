@@ -6,3 +6,5 @@
 
 
 .settings select,input[type=month]{width:100%;min-height:44px;min-width:0;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:9px;font:inherit}.spaced{margin-top:16px}.prepayment{grid-template-columns:minmax(115px,1fr) minmax(80px,1fr) 30px}.plan-summary{background:var(--soft);color:var(--ink)}
+
+#salePanel{padding:25px;margin-bottom:20px}#salePanel .notice{margin-top:18px}#salePanel h3{font-size:14px}.share-grid{display:flex;flex-wrap:wrap;gap:24px;margin:20px 0}.share-grid span{display:block;font-size:11px;color:var(--muted)}.share-grid strong{display:block;font-size:22px;margin-top:5px}textarea,input[type=date]{width:100%;min-width:0;border:1px solid var(--line);border-radius:7px;padding:10px;background:var(--bg);color:var(--ink);font:inherit}textarea{resize:vertical}#salePanel .primary{flex:initial}@media(max-width:760px){#salePanel{padding:20px}.share-grid{gap:16px}.share-grid strong{font-size:19px}}

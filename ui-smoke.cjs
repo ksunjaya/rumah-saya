@@ -19,16 +19,19 @@ const context=vm.createContext({console,Intl,Date,Math,Number,JSON,Array,Set,Obj
   localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},
   Blob:class{constructor(parts){blob=parts.join('')}},URL:{createObjectURL:()=>'',revokeObjectURL:()=>{}}});
 vm.runInContext(fs.readFileSync(__dirname+'/engine.js','utf8'),context);
+vm.runInContext(fs.readFileSync(__dirname+'/documents.js','utf8'),context);
 vm.runInContext(fs.readFileSync(__dirname+'/app.js','utf8'),context);
+vm.runInContext(fs.readFileSync(__dirname+'/sale-ui.js','utf8'),context);
 assert.equal(elements.errors.hidden,true); assert.match(elements.timeSaved.textContent,/Payoff:/);
 elements.strategy.value='contract';elements.years.value='15';elements.settings.handlers.input();
 assert.equal(elements.payoff.textContent,'15y 0m');
 elements.strategy.value='budget';elements.salary.value='0';elements.settings.handlers.input();
 assert.match(elements.payoff.textContent,/Not repaid/);assert.match(elements.warnings.textContent,/interest/);
-elements.export.onclick(); assert.match(blob,/Paid off,false/);assert.match(blob,/month,date,salary/);
+elements.export.onclick(); assert.match(blob,/Porsi debitur/);assert.match(blob,/Bunga dibayar/);
 elements.startDate.value='';elements.settings.handlers.input();assert.equal(elements.resultContent.hidden,true);
 elements.reset.onclick();elements.pin.onclick();elements.save.onclick();
 const saved=JSON.parse(store.get('ruang-mortgage-v2'));assert.equal(saved.config.strategy,'budget');assert.equal(saved.pins.length,1);
+assert.equal(saved.saleSettings.costs,0);assert.ok(!JSON.stringify(saved).includes('creditorDetails'));
 elements.monthly.onclick();assert.match(elements.schedule.innerHTML,/Oct 2026/);
 elements.valueBasis.value='real';elements.valueBasis.onchange();assert.match(elements.schedule.innerHTML,/today/);
 console.log('PASS UI wiring: rendering, strategies, unpaid state, CSV, validation, reset, comparison, save, schedule and inflation');

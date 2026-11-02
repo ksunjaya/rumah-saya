@@ -34,6 +34,7 @@ function render() {
   $('principalHint').textContent = Number.isFinite(config.principal) ? money(config.principal) : '';
   $('salaryHint').textContent = Number.isFinite(config.salary) ? money(config.salary) : '';
   const invalid = current.errors.length > 0;
+  globalThis.SaleUI?.render(config,current);
   $('errors').hidden = !invalid; $('resultContent').hidden = invalid; $('warnings').hidden = true;
   if (invalid) { $('errors').replaceChildren(); const title = document.createElement('strong'); title.textContent = 'Check your inputs to continue'; $('errors').append(title); const list = document.createElement('ul'); current.errors.forEach(e => { const item = document.createElement('li'); item.textContent = e; list.append(item); }); $('errors').append(list); return; }
   baseline = Mortgage.calculate(config, false);
@@ -104,10 +105,11 @@ function renderSchedule() {
 }
 function exportCSV() {
   if (!baseline) return;
-  const fields = ['month', 'date', 'salary', 'budget', 'opening', 'contractual', 'regular', 'extra', 'bonus', 'prepayment', 'payment', 'interest', 'principal', 'balance', 'realPayment', 'realBalance', 'shortfall', 'belowMinimum'];
-  const csv = ['Ruang mortgage projection — monthly detail', `Payment strategy,${config.strategy}`, `First payment month,${config.startDate}`, `Annual raise calendar month,${config.raiseMonth}`, `Paid off,${current.paidOff}`, `Remaining balance IDR,${current.balance.toFixed(2)}`, `Balance at contractual maturity IDR,${current.maturityBalance.toFixed(2)}`, `Principal IDR,${config.principal}`, `Annual nominal interest percent,${config.interest}`, `Contract years,${config.years}`, `Net monthly salary IDR,${config.salary}`, `Annual salary growth percent,${config.growth}`, `Salary allocation percent,${config.allocation}`, `Annual inflation percent,${config.inflation}`, `Annual bonus salary months,${config.bonus}`, `Bonus allocation percent,${config.bonusAllocation}`, `Bonus calendar month,${config.bonusMonth}`, 'All currency values IDR; real values in loan-start purchasing power', '', fields.join(','), ...current.rows.map(r => fields.map(k => ['month','date'].includes(k) ? r[k] : r[k].toFixed(2)).join(','))].join('\r\n');
-  const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }));
-  const a = document.createElement('a'); a.href = url; a.download = 'ruang-mortgage-schedule.csv'; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const s=globalThis.SaleUI?.values() || {price:config.principal,costs:0};
+  const errors=RuangDocuments.validateSale(s);
+  if(errors.length){$('saveStatus').textContent=errors.join(' ');return;}
+  const url=URL.createObjectURL(new Blob([RuangDocuments.csv(config,current,s)],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='ruang-mortgage-schedule.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 $('settings').addEventListener('submit', e => e.preventDefault());
 $('settings').addEventListener('input', () => { $('saveStatus').textContent = 'Unsaved changes. Save to keep these settings on this device.'; render(); });
@@ -120,8 +122,8 @@ $('prev').onclick = () => { page--; renderSchedule(); };
 $('next').onclick = () => { page++; renderSchedule(); };
 for (const view of ['monthly', 'yearly']) $(view).onclick = () => { interval = view; page = 0; $('monthly').setAttribute('aria-pressed', String(view === 'monthly')); $('yearly').setAttribute('aria-pressed', String(view === 'yearly')); renderSchedule(); };
 $('theme').onchange = () => { theme($('theme').value); $('saveStatus').textContent = 'Theme updated. Save settings to remember your choice.'; };
-$('save').onclick = () => { if (!baseline) { $('saveStatus').textContent = 'Fix the highlighted inputs before saving.'; return; } try { localStorage.setItem(storageKey, JSON.stringify({ version: 2, config, pins, theme: $('theme').value })); $('saveStatus').textContent = 'Saved on this device. Settings will load next time.'; } catch { $('saveStatus').textContent = 'Browser storage is unavailable. You can still use the calculator and export CSV.'; } };
-$('reset').onclick = () => { fill(Mortgage.defaults); pins = []; pinCounter = 0; $('theme').value = 'auto'; theme('auto'); render(); try { localStorage.removeItem(storageKey); localStorage.removeItem('ruang-mortgage-v1'); $('saveStatus').textContent = 'Defaults restored. Saved settings cleared on this device.'; } catch { $('saveStatus').textContent = 'Defaults restored. Browser storage could not be cleared.'; } };
+$('save').onclick = () => { if (!baseline) { $('saveStatus').textContent = 'Fix the highlighted inputs before saving.'; return; } try { localStorage.setItem(storageKey, JSON.stringify({ version: 2, config, pins, saleSettings: globalThis.SaleUI?.saved(), theme: $('theme').value })); $('saveStatus').textContent = 'Saved on this device. Settings will load next time.'; } catch { $('saveStatus').textContent = 'Browser storage is unavailable. You can still use the calculator and export CSV.'; } };
+$('reset').onclick = () => { globalThis.SaleUI?.reset(); fill(Mortgage.defaults); pins = []; pinCounter = 0; $('theme').value = 'auto'; theme('auto'); render(); try { localStorage.removeItem(storageKey); localStorage.removeItem('ruang-mortgage-v1'); $('saveStatus').textContent = 'Defaults restored. Saved settings cleared on this device.'; } catch { $('saveStatus').textContent = 'Defaults restored. Browser storage could not be cleared.'; } };
 keys.filter(k => !['years', 'bonusMonth', 'raiseMonth', 'startDate', 'strategy'].includes(k)).forEach(k => { $(k).step = 'any'; });
 for (const id of ['raiseMonth','bonusMonth']) {
   for (let i=1;i<=12;i++) { const opt=document.createElement('option'); opt.value=i; opt.textContent=new Intl.DateTimeFormat('en-GB',{month:'long',timeZone:'UTC'}).format(new Date(Date.UTC(2000,i-1,1))); $(id).append(opt); }
